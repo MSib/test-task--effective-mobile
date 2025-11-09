@@ -12,12 +12,15 @@ class TaskController extends Controller
 {
     public function index()
     {
-        return Task::select(...$this->getVisibleFields())->get();
+        return Task::select(...$this->getVisibleFields())->limit(1000)->get();
     }
 
     public function store(Request $request)
     {
-        $validated = $this->validateTask($request);
+        $validated = $request->validate(
+            Task::rules(false),
+            Task::messages()
+        );
         $task = Task::create($validated);
         return response()->json(
             $task->only($this->getVisibleFields()),
@@ -48,7 +51,10 @@ class TaskController extends Controller
                 'error' => 'Task not found'
             ], 404);
         }
-        $validated = $this->validateTask($request, true);
+        $validated = $request->validate(
+            Task::rules(true),
+            Task::messages()
+        );
         if (isset($validated['status'])) {
             $validated['status'] = $validated['status'] ? 1 : 0;
         }
@@ -87,16 +93,6 @@ class TaskController extends Controller
         if ($validator->fails()) {
             throw new ValidationException($validator);
         }
-    }
-
-    public function validateTask(Request $request, bool $update = false)
-    {
-        $validated = $request->validate([
-            'title' => ($update ? 'sometimes|' : '') . 'required|string|max:255',
-            'description' => 'sometimes|nullable|string',
-            'status' => 'sometimes|boolean',
-        ]);
-        return $validated;
     }
 
     public function getVisibleFields()
